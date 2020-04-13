@@ -2,10 +2,10 @@
 //  mesh_albe.c
 
 #include <stdio.h>
-#include <mesh.h>
+#include <~/SIM203/Projet1/tp-mesh/mesh.h>
 
 
-int lnofa[4][3] = {{1,2,3},{2,3,0},{3,0,1},{0,1,2}};
+int lnofa[4][4] = {{1,2,3,0},{2,3,0,1},{3,0,1,2},{0,1,2,3}};
 
 
 Mesh * msh_init()
@@ -345,7 +345,14 @@ int    msh_write(Mesh *msh, char *file)
    
 }
 
-
+bool est_egal(int i1,int i2,int i3,int j1,int j2,int j3)
+{
+int a,b,c;
+a=(i1-j1)*(i1-j2)*(i1-j3);
+b=(i2-j1)*(i2-j2)*(i2-j3);
+c=(i3-j1)*(i3-j2)*(i3-j3);
+return (a==0 && b==0 && c==0);
+}
 
 
 
@@ -368,7 +375,10 @@ int  msh_neighborsQ2(Mesh *msh)
           jp1 = msh->Tet[jTet].Ver[lnofa[jFac][0]];
           jp2 = msh->Tet[jTet].Ver[lnofa[jFac][1]];
           jp3 = msh->Tet[jTet].Ver[lnofa[jFac][2]];
-          /* compare the 6 points */
+          if (est_egal){
+	    i_oppose=msh->Tet[iTet].Ver[lnofa[iFac][3]]; //j'ai rajouté une dimension à lnofa pour avoir facilement l'indice opposé
+	    msh->Tet[iTet].Voi[lnofa[iFac][3]]=jTet;
+	    }
         }
       }
       
