@@ -359,11 +359,14 @@ return (a==0 && b==0 && c==0);
 
 int  msh_neighborsQ2(Mesh *msh)
 {
-  int iTet, iFac, jTet, jFac, ip1, ip2 ,ip3 , jp1, jp2, jp3;
+  int iTet, iFac, jTet, jFac, ip1, ip2 ,ip3 , jp1, jp2, jp3, it;
   
   if ( ! msh ) return 0;
   
   for(iTet=1; iTet<=msh->NbrTet; iTet++) {
+    for(it=0; it<4; it++) {
+	msh->Tet[iTet].Voi[it]=-1; //initialisation des voisins
+}
     for(iFac=0; iFac<4; iFac++) {
       ip1 = msh->Tet[iTet].Ver[lnofa[iFac][0]];
       ip2 = msh->Tet[iTet].Ver[lnofa[iFac][1]];
