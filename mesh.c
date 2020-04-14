@@ -2,7 +2,9 @@
 //  mesh_albe.c
 
 #include <stdio.h>
-#include <~/SIM203/Projet1/tp-mesh/mesh.h>
+#include <mesh.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
 
 int lnofa[4][4] = {{1,2,3,0},{2,3,0,1},{3,0,1,2},{0,1,2,3}};
@@ -356,14 +358,14 @@ return (a==0 && b==0 && c==0);
 
 
 
-
 int  msh_neighborsQ2(Mesh *msh)
 {
-  int iTet, iFac, jTet, jFac, ip1, ip2 ,ip3 , jp1, jp2, jp3, it;
+  int iTet, iFac, jTet, jFac, ip1, ip2 ,ip3 , jp1, jp2, jp3, it, i_oppose;
   
   if ( ! msh ) return 0;
-  
+		 
   for(iTet=1; iTet<=msh->NbrTet; iTet++) {
+    printf("%i / %i  \n",iTet,msh->NbrTet);
     for(it=0; it<4; it++) {
 	msh->Tet[iTet].Voi[it]=-1; //initialisation des voisins
 }
@@ -371,14 +373,14 @@ int  msh_neighborsQ2(Mesh *msh)
       ip1 = msh->Tet[iTet].Ver[lnofa[iFac][0]];
       ip2 = msh->Tet[iTet].Ver[lnofa[iFac][1]];
       ip3 = msh->Tet[iTet].Ver[lnofa[iFac][2]];
-      /* find the Tet different from iTet that has ip1, ip2, ip2 as vertices */
+       // find the Tet different from iTet that has ip1, ip2, ip2 as vertices 
       for(jTet=1; jTet<=msh->NbrTet; jTet++) {
         if ( iTet == jTet ) continue;
         for(jFac=0; jFac<4; jFac++) {
           jp1 = msh->Tet[jTet].Ver[lnofa[jFac][0]];
           jp2 = msh->Tet[jTet].Ver[lnofa[jFac][1]];
           jp3 = msh->Tet[jTet].Ver[lnofa[jFac][2]];
-          if (est_egal){
+          if (est_egal(ip1,ip2,ip3,jp1,jp2,jp3)){
 	    i_oppose=msh->Tet[iTet].Ver[lnofa[iFac][3]]; //j'ai rajouté une dimension à lnofa pour avoir facilement l'indice opposé
 	    msh->Tet[iTet].Voi[lnofa[iFac][3]]=jTet;
 	    }
