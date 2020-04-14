@@ -99,7 +99,7 @@ int    msh_write(Mesh *msh, char *file);
 
 /* functions to be implemented  */
 int    msh_boundingbox(Mesh *msh);         /* compute the bounding box of the mesh                         */
-int    msh_reorder_random(Mesh *msh);    
+int    msh_reorder_rand(Mesh *msh);    
 int    msh_reorder_z(Mesh *msh);
          /* perform a mesh using morton curve/octree-based              */
 int    msh_smooth(Mesh *msh, int nbrStep); /* a simple mesh smoohting algorithm                           */
@@ -121,13 +121,12 @@ typedef struct mesh_hash_table
   /* LstObj[id][0:2] = ip1-ip2-ip3, the 3 points defining the face  */
   /* LstObj[id][3:4] = iTet1,iTet2, the Two neighboring tets having ip1-ip2-ip3 as points */
   /* LstObj[id][5]   = idnxt the link to the next element in collision, if = 0 last element of the list */
-  
+
 } HashTable;
 
 /* Implementing the following function should be necessary */
 /* HasTable * hash_init(int SizHead, int NbrMaxObj); ==> allocate Head, LstObj */
 /* int hash_find(HashTable *hsh, int ip1, int ip2, int ip3);  return the id found (in LstObj ), if 0 the object is not in the list */
 /* int hash_add(HashTable, *hsh, int ip1, int ip2m int ip3, int iTet) ===> add this entry in the hash tab */
-
 
 
