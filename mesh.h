@@ -130,3 +130,7 @@ typedef struct mesh_hash_table
 /* int hash_add(HashTable, *hsh, int ip1, int ip2m int ip3, int iTet) ===> add this entry in the hash tab */
 
 
+HasTable * hash_init(int SizHead, int NbrMaxObj);
+int hash_add(HashTable *hsh, int ip1, int ip2 int ip3, int iTet);
+int hash_find(HasTable * hsh, int ip1, int ip2, int ip3);
+
