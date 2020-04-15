@@ -418,3 +418,63 @@ int  msh_neighbors(Mesh *msh)
 }
 
 
+HashTable * hash_init(int SizHead, int NbrMaxObj){
+  HashTable * new_table = malloc(sizeof(HashTable));
+  new_table->SizHead = SizHead;
+  new_table->NbrObj = 0;
+  new_table->NbrMaxObj = NbrMaxObj;
+  new_table->Head = malloc(SizHead * sizeof(int));
+  new_table->LstObj = malloc(NbrMaxObj * sizeof(int6));
+  return new_table;
+}
+
+int hash_add(HashTable *hsh, int ip1, int ip2, int ip3, int iTet){
+
+  int key = (ip1 + ip2 + ip3) % hsh->SizHead;
+
+  hsh->NbrObj++;
+  memcpy(&(hsh->LstObj[hsh->NbrObj]), (int6) {ip1, ip2, ip3, iTet, 0, 0}, sizeof(int6));
+
+  if(hsh->Head[key] == 0){
+    hsh->Head[key] = hsh->NbrObj;
+  }else{
+    int6 * element = &(hsh->LstObj[hsh->Head[key]]);
+    while(*element[5] != 0){
+      element = &(hsh->LstObj[*element[5]]);
+    }
+    *element[5] = hsh->NbrObj;
+  }
+  return hsh->NbrObj;
+}
+
+int hash_find(HashTable * hsh, int ip1, int ip2, int ip3){
+  
+  int key = (ip1 + ip2 + ip3) % hsh->SizHead;
+
+  if(hsh->Head[key] == 0){
+    return 0;
+  }else{
+    int next = hsh->Head[key];
+    int search = 1;
+
+    while(search){
+      int jp1 = hsh->LstObj[next][0];
+      int jp2 = hsh->LstObj[next][1];
+      int jp3 = hsh->LstObj[next][2];
+      int a = (ip1 - jp1) & (ip1 - jp2) & (ip1 - jp3);
+      int b = (ip2 - jp1) & (ip2 - jp2) & (ip2 - jp3);
+      int c = (ip3 - jp1) & (ip3 - jp2) & (ip3 - jp3);
+      if(a == 0 && b == 0 && c == 0){
+        search = 0;
+        return next;
+      }
+      next = hsh->LstObj[next][5];
+      if(next == 0){
+        search = 0;
+        return 0;
+      }
+    }
+  }
+}
+
+
