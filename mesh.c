@@ -1,10 +1,8 @@
-//
-//  mesh_albe.c
 
 #include <stdio.h>
-#include <mesh.h>
-#include <stdlib.h>
+#include "mesh.h"
 #include <stdbool.h>
+#include <omp.h>
 
 
 int lnofa[4][4] = {{1,2,3,0},{2,3,0,1},{3,0,1,2},{0,1,2,3}};
@@ -177,7 +175,9 @@ int bounding_box(Mesh *msh){
   msh->bb[3] = msh->Ver[1].Crd[0];
   msh->bb[4] = msh->Ver[1].Crd[1];
   msh->bb[5] = msh->Ver[1].Crd[2];
-  for(iVer=1; iVer<=msh->NbrVer; iVer++) {
+  int N=4;
+  #pragma omp parallel num_threads(N)
+    for(iVer=1; iVer<=msh->NbrVer; iVer++) {
     /* todo msh->bb : used to compute the Z-curve index */
     double x = msh->Ver[iVer].Crd[0];
     double y = msh->Ver[iVer].Crd[1];
@@ -219,7 +219,7 @@ int msh_reorder_rand(Mesh *msh)
     int j;
       for(iTri = 1; iTri <= msh->NbrTri; iTri++){
        msh->Tri[iTri].icrit = msh->NbrVer;
-       for(int j = 0; j < 3; j++){
+       for(j = 0; j < 3; j++){
          msh->Tri[iTri].Ver[j] = new_add[msh->Tri[iTri].Ver[j]]; //mise a jour des numeros des sommets formant les triangles
     
        }
@@ -228,7 +228,7 @@ int msh_reorder_rand(Mesh *msh)
 
    for(iTet = 1; iTet <= msh->NbrTet; iTet++){
      msh->Tet[iTet].icrit = msh->NbrVer;
-     for(int j = 0; j < 4; j++){
+     for( j = 0; j < 4; j++){
        msh->Tet[iTet].Ver[j] = new_add[msh->Tet[iTet].Ver[j]];
       
      }
@@ -268,11 +268,14 @@ long long int get_crit(Vertex v, double* bb, int depth){
   }
 }
 
+
 int msh_reorder_z(Mesh* msh){
   int iVer, iTri, iTet;
   int new_add[msh->NbrVer + 1];// on stock les nouveaux iD a l'indice correspondant a l'ancien
   bounding_box(msh);
-  for(iVer=1; iVer<=msh->NbrVer; iVer++) {
+ int N=4;
+ #pragma omp parallel num_threads(N)
+    for(iVer=1; iVer<=msh->NbrVer; iVer++) {
     msh->Ver[iVer].icrit  = get_crit(msh->Ver[iVer], msh->bb, 21);// critere de la courbe en z
     msh->Ver[iVer].idxNew = iVer;
     msh->Ver[iVer].idxOld = iVer;
@@ -287,16 +290,17 @@ int msh_reorder_z(Mesh* msh){
   for(iTri = 1; iTri <= msh->NbrTri; iTri++){
     int j;
     msh->Tri[iTri].icrit = msh->NbrVer;
-    for(int j = 0; j < 3; j++){
+    for( j = 0; j < 3; j++){
       msh->Tri[iTri].Ver[j] = new_add[msh->Tri[iTri].Ver[j]]; //mise a jour des numeros des sommets formant les triangles
       if(msh->Tri[iTri].icrit > msh->Tri[iTri].Ver[j]){msh->Tri[iTri].icrit = msh->Tri[iTri].Ver[j];} // mise a jour du critere du triangle (= plus petit index dans le triangle)
     }
   }
-  qsort(&msh->Tri[1],msh->NbrTri,sizeof(Triangle), compar_triangle); 
-
+  qsort(&msh->Tri[1],msh->NbrTri,sizeof(Triangle), compar_triangle);
+    
   for(iTet = 1; iTet <= msh->NbrTet; iTet++){
     msh->Tet[iTet].icrit = msh->NbrVer;
-    for(int j = 0; j < 4; j++){
+      int j;
+    for( j = 0; j < 4; j++){
       msh->Tet[iTet].Ver[j] = new_add[msh->Tet[iTet].Ver[j]];
       if(msh->Tet[iTet].icrit > msh->Tet[iTet].Ver[j]){msh->Tet[iTet].icrit = msh->Tet[iTet].Ver[j];}
     }
@@ -357,23 +361,21 @@ return (a==0 && b==0 && c==0);
 }
 
 
-
 int  msh_neighborsQ2(Mesh *msh)
 {
-  int iTet, iFac, jTet, jFac, ip1, ip2 ,ip3 , jp1, jp2, jp3, it, i_oppose;
+  int iTet, iFac, jTet, jFac, ip1, ip2 ,ip3 , jp1, jp2, jp3, it;
   
   if ( ! msh ) return 0;
-		 
+  
   for(iTet=1; iTet<=msh->NbrTet; iTet++) {
-    printf("%i / %i  \n",iTet,msh->NbrTet);
     for(it=0; it<4; it++) {
-	msh->Tet[iTet].Voi[it]=-1; //initialisation des voisins
+    msh->Tet[iTet].Voi[it]=-1; //initialisation des voisins
 }
     for(iFac=0; iFac<4; iFac++) {
       ip1 = msh->Tet[iTet].Ver[lnofa[iFac][0]];
       ip2 = msh->Tet[iTet].Ver[lnofa[iFac][1]];
       ip3 = msh->Tet[iTet].Ver[lnofa[iFac][2]];
-       // find the Tet different from iTet that has ip1, ip2, ip2 as vertices 
+      /* find the Tet different from iTet that has ip1, ip2, ip3 as vertices */
       for(jTet=1; jTet<=msh->NbrTet; jTet++) {
         if ( iTet == jTet ) continue;
         for(jFac=0; jFac<4; jFac++) {
@@ -381,9 +383,10 @@ int  msh_neighborsQ2(Mesh *msh)
           jp2 = msh->Tet[jTet].Ver[lnofa[jFac][1]];
           jp3 = msh->Tet[jTet].Ver[lnofa[jFac][2]];
           if (est_egal(ip1,ip2,ip3,jp1,jp2,jp3)){
-	    i_oppose=msh->Tet[iTet].Ver[lnofa[iFac][3]]; //j'ai rajouté une dimension à lnofa pour avoir facilement l'indice opposé
-	    msh->Tet[iTet].Voi[lnofa[iFac][3]]=jTet;
-	    }
+        
+        int i_oppose=msh->Tet[iTet].Ver[lnofa[iFac][3]]; //j'ai rajouté une dimension à lnofa pour avoir facilement l'indice opposé
+        msh->Tet[iTet].Voi[lnofa[iFac][3]]=jTet;
+        }
         }
       }
       
@@ -408,73 +411,12 @@ int  msh_neighbors(Mesh *msh)
       ip1 = msh->Tet[iTet].Ver[lnofa[iFac][0]];
       ip2 = msh->Tet[iTet].Ver[lnofa[iFac][1]];
       ip3 = msh->Tet[iTet].Ver[lnofa[iFac][2]];
-      /* compute the key : ip1+ip2+ip3   */
-      /* do we have objects as that key   hash_find () */
-      /*  if yes ===> look among objects and potentially update Voi */
-      /*  if no  ===> add to hash table.  hash_add()   */
+      /* compute the key : ip1+ip2+ip3   
+      /* do we have objects as that key   hash_find ()
+      /*  if yes ===> look among objects and potentially update Voi
+      /*  if no  ===> add to hash table.  hash_add() */
     }
   }
   return 1;
 }
-
-
-HashTable * hash_init(int SizHead, int NbrMaxObj){
-  HashTable * new_table = malloc(sizeof(HashTable));
-  new_table->SizHead = SizHead;
-  new_table->NbrObj = 0;
-  new_table->NbrMaxObj = NbrMaxObj;
-  new_table->Head = malloc(SizHead * sizeof(int));
-  new_table->LstObj = malloc(NbrMaxObj * sizeof(int6));
-  return new_table;
-}
-
-int hash_add(HashTable *hsh, int ip1, int ip2, int ip3, int iTet){
-
-  int key = (ip1 + ip2 + ip3) % hsh->SizHead;
-
-  hsh->NbrObj++;
-  memcpy(&(hsh->LstObj[hsh->NbrObj]), (int6) {ip1, ip2, ip3, iTet, 0, 0}, sizeof(int6));
-
-  if(hsh->Head[key] == 0){
-    hsh->Head[key] = hsh->NbrObj;
-  }else{
-    int6 * element = &(hsh->LstObj[hsh->Head[key]]);
-    while(*element[5] != 0){
-      element = &(hsh->LstObj[*element[5]]);
-    }
-    *element[5] = hsh->NbrObj;
-  }
-  return hsh->NbrObj;
-}
-
-int hash_find(HashTable * hsh, int ip1, int ip2, int ip3){
-  
-  int key = (ip1 + ip2 + ip3) % hsh->SizHead;
-
-  if(hsh->Head[key] == 0){
-    return 0;
-  }else{
-    int next = hsh->Head[key];
-    int search = 1;
-
-    while(search){
-      int jp1 = hsh->LstObj[next][0];
-      int jp2 = hsh->LstObj[next][1];
-      int jp3 = hsh->LstObj[next][2];
-      int a = (ip1 - jp1) & (ip1 - jp2) & (ip1 - jp3);
-      int b = (ip2 - jp1) & (ip2 - jp2) & (ip2 - jp3);
-      int c = (ip3 - jp1) & (ip3 - jp2) & (ip3 - jp3);
-      if(a == 0 && b == 0 && c == 0){
-        search = 0;
-        return next;
-      }
-      next = hsh->LstObj[next][5];
-      if(next == 0){
-        search = 0;
-        return 0;
-      }
-    }
-  }
-}
-
 
