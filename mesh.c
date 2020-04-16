@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include "mesh.h"
 #include <stdbool.h>
@@ -385,14 +384,13 @@ int  msh_neighborsQ2(Mesh *msh)
           if (est_egal(ip1,ip2,ip3,jp1,jp2,jp3)){
         
         int i_oppose=msh->Tet[iTet].Ver[lnofa[iFac][3]]; //Nous avons rajouté une dimension à lnofa pour avoir facilement l'indice opposé.
-        msh->Tet[iTet].Voi[lnofa[iFac][3]]=jTet;
+        msh->Tet[iTet].Voi[lnofa[iFac][3]]=jTet; //puis on ajoute le voisin
         }
         }
       }
       
     }
   }
-  
   return 1;
 }
 
@@ -400,14 +398,18 @@ int  msh_neighborsQ2(Mesh *msh)
 
 int  msh_neighbors(Mesh *msh)
 {
+
   int iTet, iFac, ip1, ip2 ,ip3 ;
   
   if ( ! msh ) return 0;
   
   /* initialize HashTable */
+
   HashTable * hsh = hash_init(msh->NbrTet, 4 * msh->NbrTet);
+
   
   for(iTet=1; iTet<=msh->NbrTet; iTet++) {
+    memcpy((msh->Tet[iTet].Voi), (int[]) {-1, -1, -1}, 3 * sizeof(int));
     for(iFac=0; iFac<4; iFac++) {
       ip1 = msh->Tet[iTet].Ver[lnofa[iFac][0]];
       ip2 = msh->Tet[iTet].Ver[lnofa[iFac][1]];
@@ -424,6 +426,7 @@ int  msh_neighbors(Mesh *msh)
           int vertice = msh->Tet[jTet].Ver[i];
           if(vertice != ip1 && vertice != ip2 && vertice != ip3){
             msh->Tet[jTet].Voi[vertice] = iTet;
+
           }
         }
       }
@@ -432,12 +435,24 @@ int  msh_neighbors(Mesh *msh)
         hash_add(hsh, ip1, ip2, ip3, iTet);
       }
     }
-    if(iTet % 1000 == 0){
-      //printf("%f / 100 de complétition\n", (((float) iTet / (float) msh->NbrTet)) * 100);
+  }
+  int nbTetOk = 0;
+  int nbTet0 = 0;
+  int nbTet1 = 0;
+  for(iTet = 1; iTet <= msh->NbrTet; iTet++){
+    for(int i = 0; i < 4; i++){
+      if(msh->Tet[iTet].Voi[i] == 0){
+        nbTet0++;
+      }else if(msh->Tet[iTet].Voi[i] == -1){
+        nbTet1++;
+      }else{
+        nbTetOk++;
+      }
     }
   }
   return 1;
 }
+
 
 
 HashTable * hash_init(int SizHead, int NbrMaxObj){
@@ -446,11 +461,14 @@ HashTable * hash_init(int SizHead, int NbrMaxObj){
   new_table->NbrObj = 1;
   new_table->NbrMaxObj = NbrMaxObj;
   new_table->Head = malloc(SizHead * sizeof(int));
+  memset(new_table->Head, 0, SizHead * sizeof(int));
   new_table->LstObj = malloc(NbrMaxObj * sizeof(int6));
+  memset(new_table->Head, 0, SizHead * sizeof(int6));
   return new_table;
 }
 
 int hash_add(HashTable *hsh, int ip1, int ip2, int ip3, int iTet){
+
 
   int key = (ip1 + ip2 + ip3) % hsh->SizHead;
 
@@ -473,7 +491,6 @@ int hash_add(HashTable *hsh, int ip1, int ip2, int ip3, int iTet){
 int hash_find(HashTable * hsh, int ip1, int ip2, int ip3){
   
   int key = (ip1 + ip2 + ip3) % hsh->SizHead;
-
   if(hsh->Head[key] == 0){
     return 0;
   }else{
@@ -498,4 +515,23 @@ int hash_find(HashTable * hsh, int ip1, int ip2, int ip3){
       }
     }
   }
+}
+
+int collision(HashTable * hsh)
+{
+int max = 0;
+int i;
+int next;
+int t=0;
+for(i = 0; i < hsh->SizHead; i++)
+{	next = hsh->Head[i];
+	if (next!=0)
+{ 		t=0;
+		while(hsh->LstObj[next][5]!=0)
+			{next=hsh->LstObj[next][5];
+			t=t+1;}
+		if(t>max) max=t;
+}
+}
+return max;
 }
