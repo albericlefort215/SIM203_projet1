@@ -262,7 +262,7 @@ long long int get_crit(Vertex v, double* bb, int depth){
     int bz = (int) z > zmid;
     int by = (int) y > ymid;
     int bx = (int) x > xmid;
-    crit = bz << 2 + (bz ^ by) << 1 + (bz ^ bx);
+    crit = bz << 2 + (bz ^ by) << 1 + (bz ^ bx); //on utilise des opérations bit à bit
     double new_bb[6] = {bb[0] + bx * xmid, bb[1] + by * ymid, bb[2] + bz * zmid, bb[3] - (1 - bx) * xmid, bb[4] - (1 - by) * ymid, bb[5] - (1 - bz) * zmid};
     return crit << (3 * (depth - 1)) + get_crit(v, new_bb, depth - 1);
   }
@@ -352,7 +352,7 @@ int    msh_write(Mesh *msh, char *file)
 }
 
 bool est_egal(int i1,int i2,int i3,int j1,int j2,int j3)
-{
+{// vaut 1 si la face i1 i2 i3 est la même que j1 j2 j3. 0 sinon
 int a,b,c;
 a=(i1-j1)*(i1-j2)*(i1-j3);
 b=(i2-j1)*(i2-j2)*(i2-j3);
@@ -384,7 +384,7 @@ int  msh_neighborsQ2(Mesh *msh)
           jp3 = msh->Tet[jTet].Ver[lnofa[jFac][2]];
           if (est_egal(ip1,ip2,ip3,jp1,jp2,jp3)){
         
-        int i_oppose=msh->Tet[iTet].Ver[lnofa[iFac][3]]; //j'ai rajouté une dimension à lnofa pour avoir facilement l'indice opposé
+        int i_oppose=msh->Tet[iTet].Ver[lnofa[iFac][3]]; //Nous avons rajouté une dimension à lnofa pour avoir facilement l'indice opposé.
         msh->Tet[iTet].Voi[lnofa[iFac][3]]=jTet;
         }
         }
@@ -405,18 +405,97 @@ int  msh_neighbors(Mesh *msh)
   if ( ! msh ) return 0;
   
   /* initialize HashTable */
+  HashTable * hsh = hash_init(msh->NbrTet, 4 * msh->NbrTet);
   
   for(iTet=1; iTet<=msh->NbrTet; iTet++) {
     for(iFac=0; iFac<4; iFac++) {
       ip1 = msh->Tet[iTet].Ver[lnofa[iFac][0]];
       ip2 = msh->Tet[iTet].Ver[lnofa[iFac][1]];
       ip3 = msh->Tet[iTet].Ver[lnofa[iFac][2]];
-      /* compute the key : ip1+ip2+ip3   
-      /* do we have objects as that key   hash_find ()
-      /*  if yes ===> look among objects and potentially update Voi
-      /*  if no  ===> add to hash table.  hash_add() */
+      /* compute the key : ip1+ip2+ip3   */
+      /* do we have objects as that key   hash_find () */
+      int id = hash_find(hsh, ip1, ip2, ip3);
+      /*  if yes ===> look among objects and potentially update Voi */
+      if(id != 0){
+        hsh->LstObj[id][4] = iTet;
+        int jTet = hsh->LstObj[id][3];
+        msh->Tet[iTet].Voi[lnofa[iFac][3]] = jTet;
+        for(int i = 0; i < 4; i++){
+          int vertice = msh->Tet[jTet].Ver[i];
+          if(vertice != ip1 && vertice != ip2 && vertice != ip3){
+            msh->Tet[jTet].Voi[vertice] = iTet;
+          }
+        }
+      }
+      /*  if no  ===> add to hash table.  hash_add()   */
+      else{
+        hash_add(hsh, ip1, ip2, ip3, iTet);
+      }
+    }
+    if(iTet % 1000 == 0){
+      //printf("%f / 100 de complétition\n", (((float) iTet / (float) msh->NbrTet)) * 100);
     }
   }
   return 1;
 }
 
+
+HashTable * hash_init(int SizHead, int NbrMaxObj){
+  HashTable * new_table = malloc(sizeof(HashTable));
+  new_table->SizHead = SizHead;
+  new_table->NbrObj = 1;
+  new_table->NbrMaxObj = NbrMaxObj;
+  new_table->Head = malloc(SizHead * sizeof(int));
+  new_table->LstObj = malloc(NbrMaxObj * sizeof(int6));
+  return new_table;
+}
+
+int hash_add(HashTable *hsh, int ip1, int ip2, int ip3, int iTet){
+
+  int key = (ip1 + ip2 + ip3) % hsh->SizHead;
+
+  hsh->NbrObj++;
+  memcpy(&(hsh->LstObj[hsh->NbrObj]), (int6) {ip1, ip2, ip3, iTet, 0, 0}, sizeof(int6));
+
+  if(hsh->Head[key] == 0){
+    hsh->Head[key] = hsh->NbrObj;
+  }else{
+    int6 element;
+    memcpy(&element, (hsh->LstObj[hsh->Head[key]]), sizeof(int6));
+    while(element[5] != 0){
+      memcpy(&element, (hsh->LstObj[element[5]]), sizeof(int6));
+    }
+    element[5] = hsh->NbrObj;
+  }
+  return hsh->NbrObj;
+}
+
+int hash_find(HashTable * hsh, int ip1, int ip2, int ip3){
+  
+  int key = (ip1 + ip2 + ip3) % hsh->SizHead;
+
+  if(hsh->Head[key] == 0){
+    return 0;
+  }else{
+    int next = hsh->Head[key];
+    int search = 1;
+
+    while(search){
+      int jp1 = hsh->LstObj[next][0];
+      int jp2 = hsh->LstObj[next][1];
+      int jp3 = hsh->LstObj[next][2];
+      int a = (ip1 - jp1) & (ip1 - jp2) & (ip1 - jp3);
+      int b = (ip2 - jp1) & (ip2 - jp2) & (ip2 - jp3);
+      int c = (ip3 - jp1) & (ip3 - jp2) & (ip3 - jp3);
+      if(a == 0 && b == 0 && c == 0){
+        search = 0;
+        return next;
+      }
+      next = hsh->LstObj[next][5];
+      if(next == 0){
+        search = 0;
+        return 0;
+      }
+    }
+  }
+}
