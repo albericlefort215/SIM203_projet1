@@ -106,6 +106,7 @@ int    msh_smooth(Mesh *msh, int nbrStep); /* a simple mesh smoohting algorithm 
 int    msh_neighbors(Mesh *msh);           /* build TetVois or TriVois with a hash table                  */
 int    msh_neighborsQ2(Mesh *msh);         /* biuld TetVois with the naive quadratic approach             */
   
+long long int get_crit(Vertex v, double* bb, int depth);
 
 /* a provided simple hash table data structure */
 typedef int int6[6];
@@ -133,4 +134,4 @@ typedef struct mesh_hash_table
 HasTable * hash_init(int SizHead, int NbrMaxObj);
 int hash_add(HashTable *hsh, int ip1, int ip2 int ip3, int iTet);
 int hash_find(HasTable * hsh, int ip1, int ip2, int ip3);
-
+int collision(HashTable * hsh);
