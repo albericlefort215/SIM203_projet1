@@ -105,18 +105,22 @@ int    msh_reorder_z(Mesh *msh);
 int    msh_smooth(Mesh *msh, int nbrStep); /* a simple mesh smoohting algorithm                           */
 int    msh_neighbors(Mesh *msh);           /* build TetVois or TriVois with a hash table                  */
 int    msh_neighborsQ2(Mesh *msh);         /* biuld TetVois with the naive quadratic approach             */
-  
-long long int get_crit(Vertex v, double* bb, int depth);
 
+typedef int int6[6]; 
+ 
+long long int get_crit(Vertex v, double* bb, int depth);
+int est_egal(int ip1,int ip2, int ip3, int jp1, int jp2, int jp3);
+int est_egal_arete(int ip1,int ip2, int jp1, int jp2);
 /* a provided simple hash table data structure */
-typedef int int6[6];
+
 
 typedef struct mesh_hash_table
 {
-  int  SizHead;   /* Maxmimum entries, the key is in [0,SizHead-1]*/
+  int  SizHead;	  /* Maxmimum entries, the key is in [0,SizHead-1]*/
   int  NbrObj;    /* Number of object in the hash tables */
   int  NbrMaxObj; /* Maximum of object that can be store in the hash tab */ 
   int  *Head ;  /* Head[key%(SizHead)] = link to the first object having this key  in the LstObj list */
+  //int  *Head_arete ;
   int6 *LstObj; /* List of objects in the Hash Tab */
   
   /* LstObj[id][0:2] = ip1-ip2-ip3, the 3 points defining the face  */
@@ -125,13 +129,33 @@ typedef struct mesh_hash_table
 
 } HashTable;
 
+typedef struct arete_hash_table
+{
+  int  SizHead;	  /* Maxmimum entries, the key is in [0,SizHead-1]*/
+  int  NbrObj;    /* Number of object in the hash tables */
+  int  NbrMaxObj; /* Maximum of object that can be store in the hash tab */ 
+  int  *Head ;  /* Head[key%(SizHead)] = link to the first object having this key  in the LstObj list */
+  //int  *Head_arete ;
+  int3 *LstObj; /* List of objects in the Hash Tab */
+  /* LstObj[id][0:1] = ip1-ip2, the 2 points defining the face  */
+  /* LstObj[id][2] = idnxt the link to the next element in collision, if = 0 last element of the list */
+
+} HashTable_arete;
+
+
 /* Implementing the following function should be necessary */
 /* HasTable * hash_init(int SizHead, int NbrMaxObj); ==> allocate Head, LstObj */
 /* int hash_find(HashTable *hsh, int ip1, int ip2, int ip3);  return the id found (in LstObj ), if 0 the object is not in the list */
 /* int hash_add(HashTable, *hsh, int ip1, int ip2m int ip3, int iTet) ===> add this entry in the hash tab */
 
+HashTable * hash_init(int SizHead, int NbrMaxObj);
+int hash_add(HashTable *hsh, int ip1, int ip2, int ip3, int iTet);
+int hash_find(HashTable * hsh, int ip1, int ip2, int ip3);
 
-HasTable * hash_init(int SizHead, int NbrMaxObj);
-int hash_add(HashTable *hsh, int ip1, int ip2 int ip3, int iTet);
-int hash_find(HasTable * hsh, int ip1, int ip2, int ip3);
+HashTable_arete * hash_init_arete(int SizHead, int NbrMaxObj);
+int hash_add_arete(HashTable_arete *hsh, int ip1, int ip2);
+int hash_find_arete(HashTable_arete * hsh, int ip1, int ip2);
+long long int compte_arete(Mesh *msh);
+
+
 int collision(HashTable * hsh);
