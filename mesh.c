@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include "mesh.h"
 #include <stdbool.h>
@@ -5,6 +6,7 @@
 
 
 int lnofa[4][4] = {{1,2,3,0},{2,3,0,1},{3,0,1,2},{0,1,2,3}};
+int lnofa_arete[6][2] = {{0,1},{0,2},{0,3},{1,2},{1,3},{2,3}};
 
 
 Mesh * msh_init()
@@ -248,25 +250,6 @@ int msh_reorder_rand(Mesh *msh)
   return 1;
 }
 
-long long int get_crit(Vertex v, double* bb, int depth){
-  if(depth == 0){return 0;}
-  else{
-    long long int crit = 0;
-    double xmid = (bb[3] - bb[0]) / 2;
-    double ymid = (bb[4] - bb[1]) / 2;
-    double zmid = (bb[5] - bb[2]) / 2;
-    double x = v.Crd[0];
-    double y = v.Crd[1];
-    double z = v.Crd[2];
-    int bz = (int) z > zmid;
-    int by = (int) y > ymid;
-    int bx = (int) x > xmid;
-    crit = bz << 2 + (bz ^ by) << 1 + (bz ^ bx); //on utilise des opérations bit à bit
-    double new_bb[6] = {bb[0] + bx * xmid, bb[1] + by * ymid, bb[2] + bz * zmid, bb[3] - (1 - bx) * xmid, bb[4] - (1 - by) * ymid, bb[5] - (1 - bz) * zmid};
-    return crit << (3 * (depth - 1)) + get_crit(v, new_bb, depth - 1);
-  }
-}
-
 
 int msh_reorder_z(Mesh* msh){
   int iVer, iTri, iTet;
@@ -285,7 +268,7 @@ int msh_reorder_z(Mesh* msh){
     msh->Ver[iVer].idxNew = iVer;
     new_add[msh->Ver[iVer].idxOld] = iVer;
   }
- 
+
   for(iTri = 1; iTri <= msh->NbrTri; iTri++){
     int j;
     msh->Tri[iTri].icrit = msh->NbrVer;
@@ -309,10 +292,28 @@ int msh_reorder_z(Mesh* msh){
   return 1;
 }
 
+long long int get_crit(Vertex v, double* bb, int depth){
+  if(depth == 0){return 0;}
+  else{
+    long long int crit = 0;
+    double xmid = (bb[3] - bb[0]) / 2;
+    double ymid = (bb[4] - bb[1]) / 2;
+    double zmid = (bb[5] - bb[2]) / 2;
+    double x = v.Crd[0];
+    double y = v.Crd[1];
+    double z = v.Crd[2];
+    int bz = (int) z > zmid;
+    int by = (int) y > ymid;
+    int bx = (int) x > xmid;
+    crit = (bz << 2) + ((bz ^ by) << 1) + (bz ^ bx);
+    double new_bb[6] = {bb[0] + bx * xmid, bb[1] + by * ymid, bb[2] + bz * zmid, bb[3] - (1 - bx) * xmid, bb[4] - (1 - by) * ymid, bb[5] - (1 - bz) * zmid};
+    return crit << (3 * (depth - 1)) + get_crit(v, new_bb, depth - 1);
+  }
+}
 
 int    msh_write(Mesh *msh, char *file)
 {
-   int iVer, iTfr, iTet;
+   int iVer, iTri, iTfr, iTet;
    int FilVer = 2;
   
    if ( ! msh  ) return 0;
@@ -327,36 +328,35 @@ int    msh_write(Mesh *msh, char *file)
    GmfSetKwd(fmsh, GmfVertices,   msh->NbrVer);
    if ( msh->Dim == 3 ) {
      for ( iVer=1; iVer<=msh->NbrVer; iVer++){
-       GmfSetLin(fmsh, GmfVertices, msh->Ver[iVer].Crd[0],msh->Ver[iVer].Crd[1],msh->Ver[iVer].Crd[2],0);
+       GmfSetLin(fmsh, GmfVertices, msh->Ver[iVer].Crd[0],msh->Ver[iVer].Crd[1],msh->Ver[iVer].Crd[2],0); 
      }
    }
    else {
      for ( iVer=1; iVer<=msh->NbrVer; iVer++){
-       GmfSetLin(fmsh, GmfVertices, msh->Ver[iVer].Crd[0],msh->Ver[iVer].Crd[1],0);
+       GmfSetLin(fmsh, GmfVertices, msh->Ver[iVer].Crd[0],msh->Ver[iVer].Crd[1],0); 
      }
    }
    
    GmfSetKwd(fmsh, GmfTriangles, msh->NbrTri);
-   for ( iTfr=1; iTfr<=msh->NbrTri; iTfr++)
-     GmfSetLin(fmsh, GmfTriangles, msh->Tri[iTfr].Ver[0], msh->Tri[iTfr].Ver[1], msh->Tri[iTfr].Ver[2], msh->Tri[iTfr].Ref);
+   for ( iTfr=1; iTfr<=msh->NbrTri; iTfr++)  
+     GmfSetLin(fmsh, GmfTriangles, msh->Tri[iTfr].Ver[0], msh->Tri[iTfr].Ver[1], msh->Tri[iTfr].Ver[2], msh->Tri[iTfr].Ref);  
    
    GmfSetKwd(fmsh, GmfTetrahedra, msh->NbrTet);
-   for ( iTet=1; iTet<=msh->NbrTet; iTet++)
+   for ( iTet=1; iTet<=msh->NbrTet; iTet++) 
      GmfSetLin(fmsh, GmfTetrahedra, msh->Tet[iTet].Ver[0], msh->Tet[iTet].Ver[1],msh->Tet[iTet].Ver[2], msh->Tet[iTet].Ver[3], 0);
    
    GmfCloseMesh(fmsh);
    
    return 1;
-   
 }
 
-bool est_egal(int i1,int i2,int i3,int j1,int j2,int j3)
+int est_egal(int i1,int i2,int i3,int j1,int j2,int j3)
 {// vaut 1 si la face i1 i2 i3 est la même que j1 j2 j3. 0 sinon
 int a,b,c;
 a=(i1-j1)*(i1-j2)*(i1-j3);
 b=(i2-j1)*(i2-j2)*(i2-j3);
 c=(i3-j1)*(i3-j2)*(i3-j3);
-return (a==0 && b==0 && c==0);
+return (int) (a==0 && b==0 && c==0);
 }
 
 
@@ -395,127 +395,106 @@ int  msh_neighborsQ2(Mesh *msh)
 }
 
 
-
 int  msh_neighbors(Mesh *msh)
 {
-
-  int iTet, iFac, ip1, ip2 ,ip3 ;
-  
-  if ( ! msh ) return 0;
-  
-  /* initialize HashTable */
-
+	
   HashTable * hsh = hash_init(msh->NbrTet, 4 * msh->NbrTet);
+  int iTet, iEdge;
 
-  
-  for(iTet=1; iTet<=msh->NbrTet; iTet++) {
-    memcpy((msh->Tet[iTet].Voi), (int[]) {-1, -1, -1}, 3 * sizeof(int));
-    for(iFac=0; iFac<4; iFac++) {
-      ip1 = msh->Tet[iTet].Ver[lnofa[iFac][0]];
-      ip2 = msh->Tet[iTet].Ver[lnofa[iFac][1]];
-      ip3 = msh->Tet[iTet].Ver[lnofa[iFac][2]];
-      /* compute the key : ip1+ip2+ip3   */
-      /* do we have objects as that key   hash_find () */
+  for(iTet = 1; iTet < msh->NbrTet; iTet++){
+
+    memcpy((int *) msh->Tet[iTet].Voi, (int[]) {-1, -1, -1, -1}, 4 * sizeof(int));
+
+    for(iEdge = 0; iEdge < 4; iEdge++){
+	
+      int ip1 = msh->Tet[iTet].Ver[lnofa[iEdge][0]];
+      int ip2 = msh->Tet[iTet].Ver[lnofa[iEdge][1]];
+      int ip3 = msh->Tet[iTet].Ver[lnofa[iEdge][2]];
+
       int id = hash_find(hsh, ip1, ip2, ip3);
-      /*  if yes ===> look among objects and potentially update Voi */
-      if(id != 0){
-        hsh->LstObj[id][4] = iTet;
-        int jTet = hsh->LstObj[id][3];
-        msh->Tet[iTet].Voi[lnofa[iFac][3]] = jTet;
-        for(int i = 0; i < 4; i++){
-          int vertice = msh->Tet[jTet].Ver[i];
-          if(vertice != ip1 && vertice != ip2 && vertice != ip3){
-            msh->Tet[jTet].Voi[vertice] = iTet;
 
-          }
+      if(id != 0){
+        int jTet = hsh->LstObj[id][3];
+        msh->Tet[iTet].Voi[lnofa[iEdge][3]] = jTet;
+        for(int jEdge = 0; jEdge < 4; jEdge++){
+          if(!(ip1 == msh->Tet[jTet].Ver[jEdge] || ip2 == msh->Tet[jTet].Ver[jEdge] || ip3 == msh->Tet[jTet].Ver[jEdge])){msh->Tet[jTet].Voi[jEdge] = iTet;}
         }
-      }
-      /*  if no  ===> add to hash table.  hash_add()   */
-      else{
+      }else{
         hash_add(hsh, ip1, ip2, ip3, iTet);
       }
     }
   }
-  int nbTetOk = 0;
-  int nbTet0 = 0;
-  int nbTet1 = 0;
-  for(iTet = 1; iTet <= msh->NbrTet; iTet++){
-    for(int i = 0; i < 4; i++){
-      if(msh->Tet[iTet].Voi[i] == 0){
-        nbTet0++;
-      }else if(msh->Tet[iTet].Voi[i] == -1){
-        nbTet1++;
-      }else{
-        nbTetOk++;
-      }
-    }
-  }
-  return 1;
+
+int coll = collision( hsh );
+printf("Le nombre maximum de collisions est de %d \n", coll);
+return 1 ;
 }
 
 
 
 HashTable * hash_init(int SizHead, int NbrMaxObj){
+  printf("Table de hash initialisée avec %d clefs possible, et un maximum de %d objets\n", SizHead, NbrMaxObj);
   HashTable * new_table = malloc(sizeof(HashTable));
   new_table->SizHead = SizHead;
-  new_table->NbrObj = 1;
+  new_table->NbrObj = 0;
   new_table->NbrMaxObj = NbrMaxObj;
   new_table->Head = malloc(SizHead * sizeof(int));
-  memset(new_table->Head, 0, SizHead * sizeof(int));
+  for(int i = 0; i < SizHead; i++){new_table->Head[i] = 0;}
   new_table->LstObj = malloc(NbrMaxObj * sizeof(int6));
-  memset(new_table->Head, 0, SizHead * sizeof(int6));
+  for(int i = 0; i < NbrMaxObj; i++){memcpy(&(new_table->LstObj[i]), (int6) {0, 0, 0, 0, 0, 0}, sizeof(int6));}
   return new_table;
 }
 
-int hash_add(HashTable *hsh, int ip1, int ip2, int ip3, int iTet){
 
-
+int hash_add(HashTable *hsh, int ip1, int ip2, int ip3, int iTet)
+{
+  // calcul de la clef de Hash
   int key = (ip1 + ip2 + ip3) % hsh->SizHead;
 
+  // Initialisation
   hsh->NbrObj++;
-  memcpy(&(hsh->LstObj[hsh->NbrObj]), (int6) {ip1, ip2, ip3, iTet, 0, 0}, sizeof(int6));
+  memcpy((int6 *) (hsh->LstObj[hsh->NbrObj]), (int6) {ip1, ip2, ip3, iTet, 0}, sizeof(int6));
 
   if(hsh->Head[key] == 0){
     hsh->Head[key] = hsh->NbrObj;
   }else{
-    int6 element;
-    memcpy(&element, (hsh->LstObj[hsh->Head[key]]), sizeof(int6));
-    while(element[5] != 0){
-      memcpy(&element, (hsh->LstObj[element[5]]), sizeof(int6));
+    int6 * element = (int6 *) (hsh->LstObj[hsh->Head[key]]);
+    while((*element)[5] != 0){
+      element = (int6 *) (hsh->LstObj[(*element)[5]]);
     }
-    element[5] = hsh->NbrObj;
+    (*element)[5] = hsh->NbrObj;
   }
-  return hsh->NbrObj;
+  return 1;
 }
 
-int hash_find(HashTable * hsh, int ip1, int ip2, int ip3){
-  
-  int key = (ip1 + ip2 + ip3) % hsh->SizHead;
-  if(hsh->Head[key] == 0){
+int hash_find(HashTable * hsh, int ip1, int ip2, int ip3)
+{
+  // calcul de la clef de Hash
+  int index = hsh->Head[(ip1 + ip2 + ip3) % hsh->SizHead];
+
+  if(index == 0){
     return 0;
   }else{
-    int next = hsh->Head[key];
+    // Sinon on parcourt les éléments ayant la même clef de hash
     int search = 1;
-
     while(search){
-      int jp1 = hsh->LstObj[next][0];
-      int jp2 = hsh->LstObj[next][1];
-      int jp3 = hsh->LstObj[next][2];
-      int a = (ip1 - jp1) & (ip1 - jp2) & (ip1 - jp3);
-      int b = (ip2 - jp1) & (ip2 - jp2) & (ip2 - jp3);
-      int c = (ip3 - jp1) & (ip3 - jp2) & (ip3 - jp3);
-      if(a == 0 && b == 0 && c == 0){
+      // On récupère l'élément à l'indice index
+      int6 * element = (int6 *) (hsh->LstObj[index]);
+      if(est_egal((*element)[0], (*element)[1], (*element)[2], ip1, ip2, ip3)){
         search = 0;
-        return next;
-      }
-      next = hsh->LstObj[next][5];
-      if(next == 0){
+        return index;
+      }else if((*element)[5] == 0){
+        // Si il n'y a pas de suivant dans le tableau, on retourne 0
         search = 0;
         return 0;
+      }else{
+        index = (*element)[5];
       }
     }
   }
+  return -1;
 }
+
 
 int collision(HashTable * hsh)
 {
@@ -534,4 +513,102 @@ for(i = 0; i < hsh->SizHead; i++)
 }
 }
 return max;
+}
+
+int est_egal_arete(int i1,int i2,int j1,int j2)
+{// vaut 1 si la face i1 i2 est la même que j1 j2. 0 sinon
+int a,b,c;
+a=(i1-j1)*(i1-j2);
+b=(i2-j1)*(i2-j2);
+return (int) (a==0 && b==0);
+}
+
+
+long long int compte_arete(Mesh *msh)
+{
+  HashTable_arete * hsh = hash_init_arete(msh->NbrTet, 4 * msh->NbrTet);
+  int iTet, iEdge;
+  long long int M=0;
+
+  for(iTet = 1; iTet < msh->NbrTet; iTet++){
+
+
+    memcpy((int *) msh->Tet[iTet].Voi, (int[]) {-1, -1, -1, -1}, 4 * sizeof(int));
+
+    for(iEdge = 0; iEdge < 6; iEdge++){
+
+      int ip1 = msh->Tet[iTet].Ver[lnofa_arete[iEdge][0]];
+      int ip2 = msh->Tet[iTet].Ver[lnofa_arete[iEdge][1]];
+
+      int id = hash_find_arete(hsh, ip1, ip2);
+
+      if(id == 0){
+        hash_add_arete(hsh, ip1, ip2);
+	M=M+1;
+      }
+    }
+  }
+return M ;
+}
+
+HashTable_arete * hash_init_arete(int SizHead, int NbrMaxObj){
+  HashTable_arete * new_table = malloc(sizeof(HashTable_arete));
+  new_table->SizHead = SizHead;
+  new_table->NbrObj = 0;
+  new_table->NbrMaxObj = NbrMaxObj;
+  new_table->Head = malloc(SizHead * sizeof(int));
+  for(int i = 0; i < SizHead; i++){new_table->Head[i] = 0;}
+  new_table->LstObj = malloc(NbrMaxObj * sizeof(int3));
+  for(int i = 0; i < NbrMaxObj; i++){memcpy(&(new_table->LstObj[i]), (int3) {0, 0, 0}, sizeof(int3));}
+  return new_table;
+}
+
+int hash_add_arete(HashTable_arete *hsh, int ip1, int ip2)
+{
+  // calcul de la clef de Hash
+  int key = (ip1 + ip2) % hsh->SizHead;
+
+  // Initialisation
+  hsh->NbrObj++;
+  memcpy((int3 *) (hsh->LstObj[hsh->NbrObj]), (int3) {ip1, ip2, 0}, sizeof(int3));
+
+  if(hsh->Head[key] == 0){
+    hsh->Head[key] = hsh->NbrObj;
+  }else{
+    int3 * element = (int3 *) (hsh->LstObj[hsh->Head[key]]);
+    while((*element)[2] != 0){
+      element = (int3 *) (hsh->LstObj[(*element)[2]]);
+    }
+    (*element)[2] = hsh->NbrObj;
+  }
+  return 1;
+}
+
+
+int hash_find_arete(HashTable_arete * hsh, int ip1, int ip2)
+{
+  // calcul de la clef de Hash
+  int index = hsh->Head[(ip1 + ip2) % hsh->SizHead];
+
+  if(index == 0){
+    return 0;
+  }else{
+    // Sinon on parcourt les éléments ayant la même clef de hash
+    int search = 1;
+    while(search){
+      // On récupère l'élément à l'indice index
+      int3 * element = (int3 *) (hsh->LstObj[index]);
+      if(est_egal_arete((*element)[0], (*element)[1], ip1, ip2)){
+        search = 0;
+        return index;
+      }else if((*element)[2] == 0){
+        // Si il n'y a pas de suivant dans le tableau, on retourne 0
+        search = 0;
+        return 0;
+      }else{
+        index = (*element)[2];
+      }
+    }
+  }
+  return -1;
 }
