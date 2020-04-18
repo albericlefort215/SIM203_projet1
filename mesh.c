@@ -175,7 +175,7 @@ int compar_tetrahedron(const void *a, const void *b)
 }
 
 
-int bounding_box_parallel(Mesh *msh){
+int bounding_box(Mesh *msh){
   int iVer;
   double xmin = msh->Ver[1].Crd[0];
   double ymin = msh->Ver[1].Crd[1];
@@ -204,37 +204,6 @@ int bounding_box_parallel(Mesh *msh){
     ymax = max(y,ymax);
     zmax= max(z,zmax);
     }}
-    msh->bb[0]=xmin;
-    msh->bb[1]=ymin;
-    msh->bb[2]=zmin;
-    msh->bb[3]=xmax;
-    msh->bb[4]=ymax;
-    msh->bb[5]=zmax;
-  return 1;
-}
-
-int bounding_box_sequential(Mesh *msh){
-  int iVer;
-  double xmin = msh->Ver[1].Crd[0];
-  double ymin = msh->Ver[1].Crd[1];
-  double zmin= msh->Ver[1].Crd[2];
-  double xmax = msh->Ver[1].Crd[0];
-  double ymax= msh->Ver[1].Crd[1];
-  double zmax = msh->Ver[1].Crd[2];
-
-  
-    for(iVer=1; iVer<=msh->NbrVer; iVer++) {
-    /* todo msh->bb : used to compute the Z-curve index */
-    double x = msh->Ver[iVer].Crd[0];
-    double y = msh->Ver[iVer].Crd[1];
-    double z = msh->Ver[iVer].Crd[2];
-    xmin = min(x,xmin);
-    ymin= min(y,ymin);
-    zmin = min(z,zmin);
-    xmax = max(x,xmax);
-    ymax = max(y,ymax);
-    zmax= max(z,zmax);
-    }
     msh->bb[0]=xmin;
     msh->bb[1]=ymin;
     msh->bb[2]=zmin;
@@ -302,54 +271,15 @@ int msh_reorder_rand(Mesh *msh)
 }
 
 
-int msh_reorder_z_parallel(Mesh* msh){
+int msh_reorder_z(Mesh* msh){
   int iVer, iTri, iTet;
   int new_add[msh->NbrVer + 1];// on stock les nouveaux iD a l'indice correspondant a l'ancien
-  bounding_box_parallel(msh);
+  bounding_box(msh);
  int N;
  printf("How many threads for msh_reorder_z? ");
  scanf("%i", &N);
 #pragma omp parallel num_threads(N)
     
-    for(iVer=1; iVer<=msh->NbrVer; iVer++) {
-    msh->Ver[iVer].icrit  = get_crit(msh->Ver[iVer], msh->bb, 21);// critere de la courbe en z
-    msh->Ver[iVer].idxNew = iVer;
-    msh->Ver[iVer].idxOld = iVer;
-  }
-  qsort(&msh->Ver[1],msh->NbrVer,sizeof(Vertex), compar_vertex);
-  for(iVer = 1; iVer <= msh->NbrVer; iVer++){  // on met a jour les id apres le tri
-      
-    msh->Ver[iVer].idxNew = iVer;
-    new_add[msh->Ver[iVer].idxOld] = iVer;
-  }
- 
-  for(iTri = 1; iTri <= msh->NbrTri; iTri++){
-    int j;
-    msh->Tri[iTri].icrit = msh->NbrVer;
-    for( j = 0; j < 3; j++){
-      msh->Tri[iTri].Ver[j] = new_add[msh->Tri[iTri].Ver[j]]; //mise a jour des numeros des sommets formant les triangles
-      if(msh->Tri[iTri].icrit > msh->Tri[iTri].Ver[j]){msh->Tri[iTri].icrit = msh->Tri[iTri].Ver[j];} // mise a jour du critere du triangle (= plus petit index dans le triangle)
-    }
-  }
-  qsort(&msh->Tri[1],msh->NbrTri,sizeof(Triangle), compar_triangle);
-    
-  for(iTet = 1; iTet <= msh->NbrTet; iTet++){
-    msh->Tet[iTet].icrit = msh->NbrVer;
-      int j;
-    for( j = 0; j < 4; j++){
-      msh->Tet[iTet].Ver[j] = new_add[msh->Tet[iTet].Ver[j]];
-      if(msh->Tet[iTet].icrit > msh->Tet[iTet].Ver[j]){msh->Tet[iTet].icrit = msh->Tet[iTet].Ver[j];}
-    }
-  }
-  qsort(&msh->Tet[1],msh->NbrTet,sizeof(Tetrahedron), compar_tetrahedron);
-
-  return 1;
-}
-
-int msh_reorder_z_sequential(Mesh* msh){
-  int iVer, iTri, iTet;
-  int new_add[msh->NbrVer + 1];// on stock les nouveaux iD a l'indice correspondant a l'ancien
-  bounding_box_sequential(msh);
     for(iVer=1; iVer<=msh->NbrVer; iVer++) {
     msh->Ver[iVer].icrit  = get_crit(msh->Ver[iVer], msh->bb, 21);// critere de la courbe en z
     msh->Ver[iVer].idxNew = iVer;
