@@ -8,9 +8,6 @@ int main(int argc, char *argv[])
      printf(" usage : mesh file \n");
      return 0;
    }
-    char mode;
-    printf("Type your mode. \n S: sequential \n P: parallel\n  ");
-    scanf("%s",&mode);
     
    /* read a mesh */
    to =  GetWallClock();
@@ -27,11 +24,7 @@ int main(int argc, char *argv[])
    /* re-order a mesh */
 
    to =  GetWallClock();
-    if (mode == 'P'){
-        msh_reorder_z_parallel(msh);}
-    if (mode=='S'){
-        msh_reorder_z_sequential(msh);}
-    
+   msh_reorder_z(msh);
    ti =  GetWallClock();
    printf("  time to re-order the mesh  %lg (s) \n",ti-to);
    
