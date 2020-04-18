@@ -1,5 +1,10 @@
 # SIM203_projet1
+Compilation 
 
-Calcul parallèle:
-Activer les outils de compilation intel en changeant les 2 premières lignes dans le fichier makemesh.make (CC=icc
-COPTS= -qopenmp) 
+Calcul séquentiel: compiler make -f makemesh_s.make
+
+Calcul parallèle: compiler make -f makemesh_p.make
+
+Exécution
+
+./mesh nom_du_maillage.meshb 
