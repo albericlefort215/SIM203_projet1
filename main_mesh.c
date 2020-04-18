@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
    ti =  GetWallClock();
    printf("  time hash tab neigh.  %lg (s) \n",ti-to);
 
-   /* create neigbhors with hash table */
+   /* computing the number of edges */
    to =  GetWallClock();
    int M=0 ;
    M = compte_arete(msh);
